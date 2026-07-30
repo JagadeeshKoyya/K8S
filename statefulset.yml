@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql-sfs
+  namespace: dev
+spec:
+  serviceName: mysql
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+        - name: mysql-image
+          image: mysql:latest
+          ports:
+            - containerPort: 3306
+          volumeMounts:
+            - name: mysql-storage
+              mountPath: /var/lib/mysql
+          volumes:
+            - name: mysql-storage
+              PersistentVolumeClaim:
+                claimName:  mysql-pvc
+          env:
+            - name: ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secrets
+                  key: ROOT_PASSWORD
+            - name: USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: mysql-config
+                  key: USERNAME
+            - name: USER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secrets
+                  key: USER_PASSWORD
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  namespace: dev
+spec:
+  clusterIP: None
+  selector:
+    app: my-web-app
+  ports:
+    - port: 3306
